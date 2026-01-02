@@ -1,6 +1,6 @@
 {
   "name": "redis-view",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "Visual Redis testing tool - test your local Redis installation",
   "type": "module",
   "bin": {
