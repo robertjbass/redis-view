@@ -1,6 +1,6 @@
 {
   "name": "redis-view",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Visual Redis testing tool - test your local Redis installation",
   "type": "module",
   "bin": {
@@ -18,6 +18,10 @@
   },
   "author": "Bob Bass",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robertjbass/redis-view"
+  },
   "packageManager": "pnpm@10.23.0",
   "publishConfig": {
     "access": "public",
