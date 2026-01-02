@@ -1,0 +1,43 @@
+{
+  "name": "redis-view",
+  "version": "1.0.0",
+  "description": "Visual Redis testing tool - test your local Redis installation",
+  "type": "module",
+  "bin": {
+    "redis-view": "./bin/cli.ts"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "start": "tsx bin/cli.ts",
+    "dev": "tsx watch bin/cli.ts",
+    "format": "prettier --write .",
+    "lint": "eslint ."
+  },
+  "author": "Bob Bass",
+  "license": "ISC",
+  "keywords": [
+    "redis",
+    "cli",
+    "gui",
+    "database",
+    "testing"
+  ],
+  "dependencies": {
+    "@hono/node-server": "^1.19.7",
+    "hono": "^4.11.3",
+    "ioredis": "^5.8.2",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^25.0.3",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.51.0"
+  }
+}

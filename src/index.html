@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Redis UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/petite-vue"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'monospace'],
+            },
+          },
+        },
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-gray-50 min-h-screen py-8 px-4">
+    <div v-scope @vue:mounted="init()" class="max-w-2xl mx-auto">
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4">
+          <h1 class="text-xl font-bold text-white flex items-center gap-2">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                stroke="currentColor"
+                stroke-width="2"
+                fill="none"
+              />
+            </svg>
+            Redis UI
+          </h1>
+        </div>
+
+        <!-- Connection Bar -->
+        <div class="bg-gray-50 border-b px-6 py-4">
+          <div class="flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[120px]">
+              <label class="block mb-1 text-xs font-medium text-gray-600 uppercase tracking-wide">Host</label>
+              <input
+                v-model="host"
+                placeholder="localhost"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition"
+              />
+            </div>
+            <div class="w-24">
+              <label class="block mb-1 text-xs font-medium text-gray-600 uppercase tracking-wide">Port</label>
+              <input
+                v-model="port"
+                type="number"
+                placeholder="6379"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition"
+              />
+            </div>
+            <button
+              @click="connect"
+              class="px-5 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition"
+            >
+              Connect
+            </button>
+          </div>
+          <div class="mt-3 flex items-center gap-2 text-sm" :class="connected ? 'text-green-600' : 'text-red-600'">
+            <span class="w-2 h-2 rounded-full" :class="connected ? 'bg-green-500' : 'bg-red-500'"></span>
+            {{ connected ? 'Connected to ' + connectedTo : 'Not connected' }}
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="border-b">
+          <nav class="flex">
+            <button
+              @click="tab = 'keys'"
+              class="px-6 py-3 text-sm font-medium border-b-2 transition"
+              :class="tab === 'keys' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            >
+              Keys
+            </button>
+            <button
+              @click="tab = 'cli'"
+              class="px-6 py-3 text-sm font-medium border-b-2 transition"
+              :class="tab === 'cli' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            >
+              CLI Commands
+            </button>
+          </nav>
+        </div>
+
+        <!-- Keys Tab -->
+        <div v-if="tab === 'keys'" class="p-6">
+          <div class="mb-6">
+            <h2 class="text-sm font-semibold text-gray-800 uppercase tracking-wide mb-3">Set Key/Value</h2>
+            <div class="flex gap-3">
+              <input
+                v-model="newKey"
+                placeholder="key"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition"
+              />
+              <input
+                v-model="newValue"
+                placeholder="value"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition"
+              />
+              <button
+                @click="setKey"
+                class="px-5 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Stored Keys</h2>
+            <button @click="refresh" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Refresh
+            </button>
+          </div>
+
+          <div v-if="keys.length" class="border rounded-lg overflow-hidden">
+            <table class="w-full">
+              <thead>
+                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <th class="px-4 py-3">Key</th>
+                  <th class="px-4 py-3">Value</th>
+                  <th class="px-4 py-3 w-20"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="k in keys" class="hover:bg-gray-50 transition">
+                  <td class="px-4 py-3 font-mono text-sm text-gray-900">{{ k.key }}</td>
+                  <td class="px-4 py-3 font-mono text-sm text-gray-600">{{ k.value }}</td>
+                  <td class="px-4 py-3">
+                    <button @click="deleteKey(k.key)" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-center py-8 text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+              />
+            </svg>
+            <p>No keys stored</p>
+          </div>
+        </div>
+
+        <!-- CLI Tab -->
+        <div v-if="tab === 'cli'" class="p-6">
+          <p class="text-sm text-gray-600 mb-4">Equivalent terminal commands for common Redis operations:</p>
+
+          <div class="space-y-4">
+            <div class="bg-gray-900 rounded-lg p-4">
+              <div class="text-xs text-gray-400 mb-2">Connect to Redis</div>
+              <code class="text-green-400 font-mono text-sm"
+                >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }}</code
+              >
+            </div>
+
+            <div class="bg-gray-900 rounded-lg p-4">
+              <div class="text-xs text-gray-400 mb-2">Test connection</div>
+              <code class="text-green-400 font-mono text-sm"
+                >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }} PING</code
+              >
+            </div>
+
+            <div class="bg-gray-900 rounded-lg p-4">
+              <div class="text-xs text-gray-400 mb-2">List all keys</div>
+              <code class="text-green-400 font-mono text-sm"
+                >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }} KEYS "*"</code
+              >
+            </div>
+
+            <div class="bg-gray-900 rounded-lg p-4">
+              <div class="text-xs text-gray-400 mb-2">Set a key</div>
+              <code class="text-green-400 font-mono text-sm"
+                >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }} SET {{ newKey || 'mykey' }} "{{ newValue
+                || 'myvalue' }}"</code
+              >
+            </div>
+
+            <div class="bg-gray-900 rounded-lg p-4">
+              <div class="text-xs text-gray-400 mb-2">Get a key</div>
+              <code class="text-green-400 font-mono text-sm"
+                >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }} GET {{ newKey || 'mykey' }}</code
+              >
+            </div>
+
+            <div class="bg-gray-900 rounded-lg p-4">
+              <div class="text-xs text-gray-400 mb-2">Delete a key</div>
+              <code class="text-green-400 font-mono text-sm"
+                >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }} DEL {{ newKey || 'mykey' }}</code
+              >
+            </div>
+
+            <div v-if="keys.length" class="mt-6">
+              <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide mb-3">Your Current Keys</h3>
+              <div class="space-y-2">
+                <div v-for="k in keys" class="bg-gray-900 rounded-lg p-4">
+                  <div class="text-xs text-gray-400 mb-2">Get "{{ k.key }}"</div>
+                  <code class="text-green-400 font-mono text-sm"
+                    >redis-cli -h {{ host || 'localhost' }} -p {{ port || 6379 }} GET "{{ k.key }}"</code
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-center text-xs text-gray-400 mt-4">Hono + petite-vue + Tailwind</p>
+    </div>
+
+    <script type="module">
+      import { createApp } from 'https://unpkg.com/petite-vue?module'
+
+      createApp({
+        connected: false,
+        connectedTo: '',
+        keys: [],
+        newKey: '',
+        newValue: '',
+        host: 'localhost',
+        port: 6379,
+        tab: 'keys',
+
+        async init() {
+          await this.checkStatus()
+        },
+
+        async checkStatus() {
+          const res = await fetch('/api/status')
+          const data = await res.json()
+          this.connected = data.connected
+          this.connectedTo = data.connectedTo || ''
+          if (this.connected) this.refresh()
+        },
+
+        async connect() {
+          const res = await fetch('/api/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              host: this.host || 'localhost',
+              port: parseInt(this.port) || 6379,
+            }),
+          })
+          const data = await res.json()
+          this.connected = data.connected
+          this.connectedTo = data.connectedTo || ''
+          if (this.connected) this.refresh()
+        },
+
+        async refresh() {
+          const res = await fetch('/api/keys')
+          const keyList = await res.json()
+          this.keys = await Promise.all(
+            keyList.map(async (key) => {
+              const r = await fetch('/api/get/' + encodeURIComponent(key))
+              const data = await r.json()
+              return { key, value: data.value }
+            }),
+          )
+        },
+
+        async setKey() {
+          if (!this.newKey) return
+          await fetch('/api/set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: this.newKey, value: this.newValue }),
+          })
+          this.newKey = ''
+          this.newValue = ''
+          this.refresh()
+        },
+
+        async deleteKey(key) {
+          await fetch('/api/delete/' + encodeURIComponent(key), {
+            method: 'DELETE',
+          })
+          this.refresh()
+        },
+      }).mount()
+    </script>
+  </body>
+</html>
