@@ -1,10 +1,10 @@
 {
   "name": "redis-view",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Visual Redis testing tool - test your local Redis installation",
   "type": "module",
   "bin": {
-    "redis-view": "./bin/redis-view.js"
+    "redis-view": "bin/redis-view.js"
   },
   "files": [
     "bin",
